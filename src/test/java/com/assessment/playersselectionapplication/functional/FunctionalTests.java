@@ -12,6 +12,7 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -41,6 +42,32 @@ public class FunctionalTests {
 	private final String username;
 	private final String password;
 
+	private static void createDatabaseIfNotExists(String url, String username, String password) throws SQLException {
+		try (Connection connection = DriverManager.getConnection(url, username, password);
+				Statement statement = connection.createStatement()) {
+
+			String createDatabaseQuery = "CREATE DATABASE IF NOT EXISTS players_selection";
+			statement.executeUpdate(createDatabaseQuery);
+		}
+	}
+
+	private static void createTablesIfNotExists(String url, String username, String password) throws SQLException {
+		String createPlayerTableQuery = "CREATE TABLE IF NOT EXISTS Player (" + "id INT AUTO_INCREMENT PRIMARY KEY,"
+				+ "name VARCHAR(10) NOT NULL," + "domesticTeam VARCHAR(255) NOT NULL,"
+				+ "average INT NOT NULL DEFAULT 0" + ")";
+
+		String createScoreTableQuery = "CREATE TABLE IF NOT EXISTS Score (" + "id INT AUTO_INCREMENT PRIMARY KEY,"
+				+ "score INT NOT NULL," + "playerId INT NOT NULL," + "FOREIGN KEY (playerId) REFERENCES Player(id)"
+				+ ")";
+
+		try (Connection connection = DriverManager.getConnection(url, username, password);
+				Statement statement = connection.createStatement()) {
+
+			statement.executeUpdate(createPlayerTableQuery);
+			statement.executeUpdate(createScoreTableQuery);
+		}
+	}
+
 	public FunctionalTests() {
 		Properties properties = new Properties();
 		try (InputStream inputStream = getClass().getClassLoader().getResourceAsStream("application.properties")) {
@@ -51,6 +78,14 @@ public class FunctionalTests {
 			url = properties.getProperty("db.url");
 			username = properties.getProperty("db.username");
 			password = properties.getProperty("db.password");
+
+			try {
+				createDatabaseIfNotExists(url, username, password);
+				createTablesIfNotExists(url, username, password);
+			} catch (SQLException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		} catch (IOException e) {
 			throw new RuntimeException("Failed to load application.properties file", e);
 		}
